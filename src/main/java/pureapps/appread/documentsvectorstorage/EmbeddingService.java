@@ -2,7 +2,6 @@ package pureapps.appread.documentsvectorstorage;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Service;
 import pureapps.appread.documentsvectorstorage.dto.DocumentChunk;
@@ -57,6 +56,18 @@ class EmbeddingService {
                     chunk.getFilePath(), chunk.getStartLine(), chunk.getEndLine(), e.getMessage());
 
             throw new RuntimeException("Failed to generate embedding for chunk: " + chunk.getFilePath(), e);
+
+        }
+    }
+
+    float[] generateEmbedding(String query) {
+        try {
+            return embeddingModel.embed(query);
+
+        } catch (Exception e) {
+            log.error("Error generating embedding for query: {}",
+                    query);
+            throw new RuntimeException("Failed to generate embedding for query: " + query, e);
 
         }
     }
