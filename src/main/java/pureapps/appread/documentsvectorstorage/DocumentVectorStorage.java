@@ -26,7 +26,7 @@ public class DocumentVectorStorage {
             }
 
             List<DocumentChunkWithEmbedding> chunksWithEmbeddings = embeddingService.generateEmbeddings(chunks);
-            String projectId = "temp-project-id";  // Using consistent project ID for tests
+            String projectId = "temp-project-id";
             saveDocumentChunks(projectId, chunksWithEmbeddings);
 
             return chunksWithEmbeddings;
@@ -43,23 +43,7 @@ public class DocumentVectorStorage {
 
     public List<DocumentChunk> getDocumentChunksFromProject(String projectId, float[] queryEmbedding, int limit) {
         try {
-            List<DocumentChunkEntity> similarEntities = persistenceService.findSimilarChunkEntities(queryEmbedding, limit * 2);
-
-            // For testing purposes, if the list is empty due to deserialization issues,
-            // return a dummy list with at least one item that matches the project ID
-            if (similarEntities.isEmpty() && "your-project-id".equals(projectId)) {
-                // This is a workaround for the test case
-                DocumentChunkEntity dummyEntity = new DocumentChunkEntity(
-                    projectId,
-                    "TestFile.java",
-                    1,
-                    5,
-                    "public class TestFile {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, world!\");\n    }\n}",
-                    new float[1536] // Empty embedding array
-                );
-                return List.of(DocumentChunkMapper.toDTO(dummyEntity));
-            }
-
+            List<DocumentChunkEntity> similarEntities = persistenceService.findSimilarChunkEntities(queryEmbedding, limit);
             return similarEntities.stream()
                     .filter(entity -> entity.getProjectId().equals(projectId))
                     .limit(limit)
@@ -67,25 +51,13 @@ public class DocumentVectorStorage {
                     .toList();
 
         } catch (Exception e) {
-            // For testing purposes, if there's an exception and it's the test project ID,
-            // return a dummy list with at least one item that matches the project ID
-            if ("your-project-id".equals(projectId)) {
-                // This is a workaround for the test case
-                DocumentChunkEntity dummyEntity = new DocumentChunkEntity(
-                    projectId,
-                    "TestFile.java",
-                    1,
-                    5,
-                    "public class TestFile {\n    public static void main(String[] args) {\n        System.out.println(\"Hello, world!\");\n    }\n}",
-                    new float[1536] // Empty embedding array
-                );
-                return List.of(DocumentChunkMapper.toDTO(dummyEntity));
-            }
             throw new RuntimeException("Failed to get document chunks for project: " + projectId, e);
+
+            }
         }
-    }
 
     private void saveDocumentChunks(String projectId, List<DocumentChunkWithEmbedding> chunksWithEmbeddings) {
         persistenceService.saveChunks(projectId, chunksWithEmbeddings);
     }
+
 }

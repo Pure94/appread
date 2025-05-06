@@ -116,9 +116,9 @@ class DocumentVectorStorageIntegrationTest {
         documentVectorStorage.generateEmbeddingsAndPersist(tempProjectDir);
 
         // Now query for chunks
-        String projectId = "your-project-id";
+        String projectId = "temp-project-id";
         String query = "Hello, world";
-        int limit = 5;
+        int limit = 1;
 
         List<DocumentChunk> result = documentVectorStorage.getDocumentChunksFromProject(projectId, query, limit);
 
