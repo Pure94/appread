@@ -38,7 +38,7 @@ class PersistenceService {
                     ))
                     .collect(Collectors.toList());
 
-            chunkRepository.saveAll(entities);
+            chunkRepository.saveAllWithVectorCast(entities);
             log.info("Successfully saved {} document chunks to the database.", entities.size());
 
         } catch (Exception e) {

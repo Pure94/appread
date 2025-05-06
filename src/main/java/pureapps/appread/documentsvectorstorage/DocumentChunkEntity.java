@@ -43,7 +43,7 @@ class DocumentChunkEntity {
     private String content;
 
     @Column(name = "embedding", nullable = false, columnDefinition = "vector(1536)")
-    @JdbcTypeCode(SqlTypes.VECTOR)
+    @JdbcTypeCode(SqlTypes.VARBINARY)
     private float[] embedding;
 
     @Column(name = "created_at", columnDefinition = "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP")
@@ -54,30 +54,16 @@ class DocumentChunkEntity {
         createdAt = OffsetDateTime.now();
     }
 
-/*    public DocumentChunkEntity(String projectId, String filePath, int startLine, int endLine, String content, PGvector embedding) {
-        this.projectId = projectId;
-        this.filePath = filePath;
-        this.startLine = startLine;
-        this.endLine = endLine;
-        this.content = content;
-        this.embedding = embedding;
-    }*/
-
     public DocumentChunkEntity(String projectId, String filePath, int startLine, int endLine, String content, float[] embedding) {
         this.projectId = projectId;
         this.filePath = filePath;
         this.startLine = startLine;
         this.endLine = endLine;
         this.content = content;
-        this.embedding = embedding;
+        setEmbeddingFromArray(embedding);
     }
 
-/*    public void setEmbeddingFromArray(float[] embeddingArray) {
-        if (embeddingArray != null) {
-            this.embedding = new PGvector(embeddingArray);
-        } else {
-            this.embedding = null;
-        }
-
-    }*/
+    public void setEmbeddingFromArray(float[] embeddingArray) {
+        this.embedding = embeddingArray;
+    }
 }
