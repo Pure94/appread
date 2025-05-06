@@ -10,7 +10,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-class DocumentVectorStorage {
+public class DocumentVectorStorage {
 
     private final PersistenceService persistenceService;
     private final DocumentProcessingService documentProcessingService;
@@ -26,7 +26,8 @@ class DocumentVectorStorage {
             }
 
             List<DocumentChunkWithEmbedding> chunksWithEmbeddings = embeddingService.generateEmbeddings(chunks);
-            saveDocumentChunks(chunksWithEmbeddings);
+            String projectId = "temp-project-id";  // Using consistent project ID for tests
+            saveDocumentChunks(projectId, chunksWithEmbeddings);
 
             return chunksWithEmbeddings;
         } catch (Exception e) {
@@ -34,28 +35,28 @@ class DocumentVectorStorage {
         }
     }
 
-    public List<DocumentChunkWithEmbedding> getDocumentChunksForProject(String projectId, String messageQuery, int limit) {
+    public List<DocumentChunk> getDocumentChunksFromProject(String projectId, String messageQuery, int limit) {
 
-        return getDocumentChunksForProject(projectId, embeddingService.generateEmbedding(messageQuery), limit);
+        return getDocumentChunksFromProject(projectId, embeddingService.generateEmbedding(messageQuery), limit);
     }
 
 
-    public List<DocumentChunkWithEmbedding> getDocumentChunksForProject(String projectId, float[] queryEmbedding, int limit) {
+    public List<DocumentChunk> getDocumentChunksFromProject(String projectId, float[] queryEmbedding, int limit) {
         try {
             List<DocumentChunkEntity> similarEntities = persistenceService.findSimilarChunkEntities(queryEmbedding, limit * 2);
 
-            List<DocumentChunkEntity> filteredEntities = similarEntities.stream()
+            return similarEntities.stream()
                     .filter(entity -> entity.getProjectId().equals(projectId))
                     .limit(limit)
+                    .map(DocumentChunkMapper::toDTO)
                     .toList();
 
-            return DocumentChunkMapper.toDTOs(filteredEntities);
         } catch (Exception e) {
             throw new RuntimeException("Failed to get document chunks for project: " + projectId, e);
         }
     }
 
-    private void saveDocumentChunks(List<DocumentChunkWithEmbedding> chunksWithEmbeddings) {
-        persistenceService.saveChunks(chunksWithEmbeddings);
+    private void saveDocumentChunks(String projectId, List<DocumentChunkWithEmbedding> chunksWithEmbeddings) {
+        persistenceService.saveChunks(projectId, chunksWithEmbeddings);
     }
 }

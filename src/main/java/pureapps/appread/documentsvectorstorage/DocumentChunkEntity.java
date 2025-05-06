@@ -1,10 +1,12 @@
 package pureapps.appread.documentsvectorstorage;
 
+import com.pgvector.PGvector;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.Type;
 import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
@@ -52,6 +54,15 @@ class DocumentChunkEntity {
         createdAt = OffsetDateTime.now();
     }
 
+/*    public DocumentChunkEntity(String projectId, String filePath, int startLine, int endLine, String content, PGvector embedding) {
+        this.projectId = projectId;
+        this.filePath = filePath;
+        this.startLine = startLine;
+        this.endLine = endLine;
+        this.content = content;
+        this.embedding = embedding;
+    }*/
+
     public DocumentChunkEntity(String projectId, String filePath, int startLine, int endLine, String content, float[] embedding) {
         this.projectId = projectId;
         this.filePath = filePath;
@@ -60,4 +71,13 @@ class DocumentChunkEntity {
         this.content = content;
         this.embedding = embedding;
     }
+
+/*    public void setEmbeddingFromArray(float[] embeddingArray) {
+        if (embeddingArray != null) {
+            this.embedding = new PGvector(embeddingArray);
+        } else {
+            this.embedding = null;
+        }
+
+    }*/
 }

@@ -18,7 +18,7 @@ class PersistenceService {
     private final DocumentChunkRepository chunkRepository;
 
     @Transactional
-    void saveChunks(List<DocumentChunkWithEmbedding> chunksWithEmbeddings) {
+    void saveChunks(String projectId, List<DocumentChunkWithEmbedding> chunksWithEmbeddings) {
         if (chunksWithEmbeddings == null || chunksWithEmbeddings.isEmpty()) {
             log.warn("No chunks provided to save.");
             return;
@@ -29,7 +29,7 @@ class PersistenceService {
         try {
             List<DocumentChunkEntity> entities = chunksWithEmbeddings.stream()
                     .map(chunk -> new DocumentChunkEntity(
-                            "temp-project-id",
+                            projectId,
                             chunk.getFilePath(),
                             chunk.getStartLine(),
                             chunk.getEndLine(),
