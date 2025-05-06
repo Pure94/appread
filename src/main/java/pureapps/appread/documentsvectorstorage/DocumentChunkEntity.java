@@ -1,11 +1,11 @@
 package pureapps.appread.documentsvectorstorage;
 
-import jakarta.persistence.*; // Użyj javax.persistence.* jeśli używasz starszej wersji Spring Boot / JPA
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode; // Import dla @JdbcTypeCode
-import org.hibernate.type.SqlTypes;           // Import dla SqlTypes
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;

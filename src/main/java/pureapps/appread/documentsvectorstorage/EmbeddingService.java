@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Service;
+import pureapps.appread.documentsvectorstorage.dto.DocumentChunk;
 import pureapps.appread.documentsvectorstorage.dto.DocumentChunkWithEmbedding;
 
 import java.util.List;
@@ -17,18 +18,17 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 class EmbeddingService {
-
     private final EmbeddingModel embeddingModel;
     private final ExecutorService executorService = Executors.newFixedThreadPool(
             Math.max(2, Runtime.getRuntime().availableProcessors() - 1)
     );
 
-    List<DocumentChunkWithEmbedding> generateEmbeddings(List<DocumentProcessingService.DocumentChunk> chunks) {
+    List<DocumentChunkWithEmbedding> generateEmbeddings(List<DocumentChunk> chunks) {
         log.info("Generating embeddings for {} chunks using {}", chunks.size(), embeddingModel.getClass().getSimpleName());
 
         List<CompletableFuture<DocumentChunkWithEmbedding>> futures = chunks.stream()
                 .map(chunk -> CompletableFuture.supplyAsync(() -> generateEmbedding(chunk), executorService))
-                .collect(Collectors.toList());
+                .toList();
 
         List<DocumentChunkWithEmbedding> results = futures.stream()
                 .map(CompletableFuture::join)
@@ -38,7 +38,7 @@ class EmbeddingService {
         return results;
     }
 
-    DocumentChunkWithEmbedding generateEmbedding(DocumentProcessingService.DocumentChunk chunk) {
+    DocumentChunkWithEmbedding generateEmbedding(DocumentChunk chunk) {
         try {
             float[] embeddingFloatArray = embeddingModel.embed(chunk.getContent());
 
