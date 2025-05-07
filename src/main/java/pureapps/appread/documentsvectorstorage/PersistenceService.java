@@ -43,7 +43,7 @@ class PersistenceService {
 
         } catch (Exception e) {
             log.error("Error saving document chunks to database: {}", e.getMessage(), e);
-            throw new PersistenceException("Failed to save chunks to database", e);
+            throw new RuntimeException("Failed to save chunks to database", e);
         }
     }
 
@@ -56,16 +56,14 @@ class PersistenceService {
             log.info("Deleted {} chunks for project: {}", deletedCount, projectId);
         } catch (Exception e) {
             log.error("Error deleting chunks for project {}: {}", projectId, e.getMessage(), e);
-            throw new PersistenceException("Failed to delete chunks for project: " + projectId, e);
+            throw new RuntimeException("Failed to delete chunks for project: " + projectId, e);
         }
     }
 
     List<DocumentChunkEntity> findSimilarChunkEntities(float[] queryEmbedding, float similarityThreshold, int limit, String projectId) {
         log.debug("Finding {} similar chunk entities with a similarity threshold of {} for project {}", limit, similarityThreshold, projectId);
         try {
-            List<DocumentChunkEntity> similarEntities = chunkRepository.findAll(
-                DocumentChunkSpecification.similarChunks(queryEmbedding, similarityThreshold, projectId)
-            );
+            List<DocumentChunkEntity> similarEntities = chunkRepository.findSimilarChunks(queryEmbedding, similarityThreshold, limit, projectId);
             log.info("Found {} similar chunk entities for project {}", similarEntities.size(), projectId);
             return similarEntities;
         } catch (Exception e) {
