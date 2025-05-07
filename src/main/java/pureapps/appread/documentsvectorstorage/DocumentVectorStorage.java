@@ -43,10 +43,8 @@ public class DocumentVectorStorage {
 
     public List<DocumentChunk> getDocumentChunksFromProject(String projectId, float[] queryEmbedding, int limit) {
         try {
-            List<DocumentChunkEntity> similarEntities = persistenceService.findSimilarChunkEntities(queryEmbedding, 1,limit );
+            List<DocumentChunkEntity> similarEntities = persistenceService.findSimilarChunkEntities(queryEmbedding, 1, limit, projectId);
             return similarEntities.stream()
-                    .filter(entity -> entity.getProjectId().equals(projectId))
-                    .limit(limit)
                     .map(DocumentChunkMapper::toDTO)
                     .toList();
 

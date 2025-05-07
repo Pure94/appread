@@ -60,14 +60,14 @@ class PersistenceService {
         }
     }
 
-    List<DocumentChunkEntity> findSimilarChunkEntities(float[] queryEmbedding, float similarityThreshold, int limit) {
-        log.debug("Finding {} similar chunk entities with a similarity threshold of {}", limit, similarityThreshold);
+    List<DocumentChunkEntity> findSimilarChunkEntities(float[] queryEmbedding, float similarityThreshold, int limit, String projectId) {
+        log.debug("Finding {} similar chunk entities with a similarity threshold of {} for project {}", limit, similarityThreshold, projectId);
         try {
-            List<DocumentChunkEntity> similarEntities = chunkRepository.findSimilarChunks(queryEmbedding, 0.1f, limit);
-            log.info("Found {} similar chunk entities", similarEntities.size());
+            List<DocumentChunkEntity> similarEntities = chunkRepository.findSimilarChunks(queryEmbedding, similarityThreshold, limit, projectId);
+            log.info("Found {} similar chunk entities for project {}", similarEntities.size(), projectId);
             return similarEntities;
         } catch (Exception e) {
-            log.error("Error finding similar chunk entities: {}", e.getMessage(), e);
+            log.error("Error finding similar chunk entities for project {}: {}", projectId, e.getMessage(), e);
             return List.of();
         }
     }

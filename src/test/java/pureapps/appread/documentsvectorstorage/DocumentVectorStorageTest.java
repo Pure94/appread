@@ -139,19 +139,11 @@ class DocumentVectorStorageTest {
                 new float[1536]
         );
 
-        DocumentChunkEntity entity3 = new DocumentChunkEntity(
-                "other-project",
-                "test/path3.java",
-                21,
-                30,
-                "Test content 3",
-                new float[1536]
-        );
-
-        List<DocumentChunkEntity> similarEntities = Arrays.asList(entity1, entity2, entity3);
+        // Now we only return entities from the specified project
+        List<DocumentChunkEntity> similarEntities = Arrays.asList(entity1, entity2);
 
         // Mock the behavior of dependencies
-        when(persistenceService.findSimilarChunkEntities(queryEmbedding, 1, limit)).thenReturn(similarEntities);
+        when(persistenceService.findSimilarChunkEntities(queryEmbedding, 1, limit, projectId)).thenReturn(similarEntities);
 
         // Call the method under test
         List<DocumentChunk> result = documentVectorStorage.getDocumentChunksFromProject(projectId, queryEmbedding, limit);
@@ -165,7 +157,7 @@ class DocumentVectorStorageTest {
         assertEquals(10, result.get(0).getEndLine());
 
         // Verify that the dependencies were called with the expected arguments
-        verify(persistenceService).findSimilarChunkEntities(queryEmbedding, 1, limit);
+        verify(persistenceService).findSimilarChunkEntities(queryEmbedding, 1, limit, projectId);
     }
 
     @Test
@@ -176,7 +168,7 @@ class DocumentVectorStorageTest {
         int limit = 10;
 
         // Mock the behavior of dependencies
-        when(persistenceService.findSimilarChunkEntities(queryEmbedding, 1, limit)).thenReturn(List.of());
+        when(persistenceService.findSimilarChunkEntities(queryEmbedding, 1, limit, projectId)).thenReturn(List.of());
 
         // Call the method under test
         List<DocumentChunk> result = documentVectorStorage.getDocumentChunksFromProject(projectId, queryEmbedding, limit);
@@ -186,7 +178,7 @@ class DocumentVectorStorageTest {
         assertTrue(result.isEmpty());
 
         // Verify that the dependencies were called with the expected arguments
-        verify(persistenceService).findSimilarChunkEntities(queryEmbedding, 1, limit);
+        verify(persistenceService).findSimilarChunkEntities(queryEmbedding, 1, limit, projectId);
     }
 
     @Test
@@ -216,20 +208,12 @@ class DocumentVectorStorageTest {
                 new float[1536]
         );
 
-        DocumentChunkEntity entity3 = new DocumentChunkEntity(
-                "other-project",
-                "test/path3.java",
-                21,
-                30,
-                "Test content 3",
-                new float[1536]
-        );
-
-        List<DocumentChunkEntity> similarEntities = Arrays.asList(entity1, entity2, entity3);
+        // Now we only return entities from the specified project
+        List<DocumentChunkEntity> similarEntities = Arrays.asList(entity1, entity2);
 
         // Mock the behavior of dependencies
         when(embeddingService.generateEmbedding(messageQuery)).thenReturn(generatedEmbedding);
-        when(persistenceService.findSimilarChunkEntities(generatedEmbedding, 1, limit)).thenReturn(similarEntities);
+        when(persistenceService.findSimilarChunkEntities(generatedEmbedding, 1, limit, projectId)).thenReturn(similarEntities);
 
         // Call the method under test
         List<DocumentChunk> result = documentVectorStorage.getDocumentChunksFromProject(projectId, messageQuery, limit);
@@ -244,7 +228,7 @@ class DocumentVectorStorageTest {
 
         // Verify that the dependencies were called with the expected arguments
         verify(embeddingService).generateEmbedding(messageQuery);
-        verify(persistenceService).findSimilarChunkEntities(generatedEmbedding, 1, limit);
+        verify(persistenceService).findSimilarChunkEntities(generatedEmbedding, 1, limit, projectId);
     }
 
     @Test
@@ -257,7 +241,7 @@ class DocumentVectorStorageTest {
 
         // Mock the behavior of dependencies
         when(embeddingService.generateEmbedding(messageQuery)).thenReturn(generatedEmbedding);
-        when(persistenceService.findSimilarChunkEntities(generatedEmbedding, 1, limit)).thenReturn(List.of());
+        when(persistenceService.findSimilarChunkEntities(generatedEmbedding, 1, limit, projectId)).thenReturn(List.of());
 
         // Call the method under test
         List<DocumentChunk> result = documentVectorStorage.getDocumentChunksFromProject(projectId, messageQuery, limit);
@@ -268,6 +252,6 @@ class DocumentVectorStorageTest {
 
         // Verify that the dependencies were called with the expected arguments
         verify(embeddingService).generateEmbedding(messageQuery);
-        verify(persistenceService).findSimilarChunkEntities(generatedEmbedding, 1, limit);
+        verify(persistenceService).findSimilarChunkEntities(generatedEmbedding, 1, limit, projectId);
     }
 }
