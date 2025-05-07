@@ -52,7 +52,7 @@ class PersistenceService {
     void deleteChunksForRepository(String projectId) {
         log.info("Deleting all document chunks for project: {}", projectId);
         try {
-            UUID deletedCount = chunkRepository.deleteByProjectId(projectId);
+            int deletedCount = chunkRepository.deleteByProjectId(projectId);
             log.info("Deleted {} chunks for project: {}", deletedCount, projectId);
         } catch (Exception e) {
             log.error("Error deleting chunks for project {}: {}", projectId, e.getMessage(), e);
@@ -63,7 +63,7 @@ class PersistenceService {
     List<DocumentChunkEntity> findSimilarChunkEntities(float[] queryEmbedding, float similarityThreshold, int limit) {
         log.debug("Finding {} similar chunk entities with a similarity threshold of {}", limit, similarityThreshold);
         try {
-            List<DocumentChunkEntity> similarEntities = chunkRepository.findSimilarChunks(queryEmbedding, similarityThreshold, limit);
+            List<DocumentChunkEntity> similarEntities = chunkRepository.findSimilarChunks(queryEmbedding, 0.1f, limit);
             log.info("Found {} similar chunk entities", similarEntities.size());
             return similarEntities;
         } catch (Exception e) {

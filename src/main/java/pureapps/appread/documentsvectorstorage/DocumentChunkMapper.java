@@ -2,6 +2,7 @@
 package pureapps.appread.documentsvectorstorage;
 
 import lombok.experimental.UtilityClass;
+import org.springframework.ai.document.Document;
 import pureapps.appread.documentsvectorstorage.dto.DocumentChunk;
 import pureapps.appread.documentsvectorstorage.dto.DocumentChunkWithEmbedding;
 
@@ -28,5 +29,6 @@ class DocumentChunkMapper {
         dto.setEndLine(entity.getEndLine());
         return dto;
     }
+
 
 }
