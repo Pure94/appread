@@ -15,9 +15,14 @@ interface DocumentChunkRepository extends JpaRepository<DocumentChunkEntity, UUI
     @Modifying
     UUID deleteByProjectId(String projectId);
 
-    @Query(value = "SELECT uuid, project_id, file_path, start_line, end_line, content, NULL as embedding, created_at FROM document_chunks ORDER BY embedding <=> CAST(:queryEmbedding AS vector) LIMIT :limit", nativeQuery = true)
+    @Query(value = "SELECT uuid, project_id, file_path, start_line, end_line, content, NULL as embedding " +
+                   "FROM document_chunks " +
+                   "WHERE (embedding <=> CAST(:queryEmbedding AS vector)) <= :similarityThreshold " +
+                   "ORDER BY embedding <=> CAST(:queryEmbedding AS vector) " +
+                   "LIMIT :limit", nativeQuery = true)
     List<DocumentChunkEntity> findSimilarChunks(
             @Param("queryEmbedding") float[] queryEmbedding,
+            @Param("similarityThreshold") float similarityThreshold,
             @Param("limit") int limit
     );
 
