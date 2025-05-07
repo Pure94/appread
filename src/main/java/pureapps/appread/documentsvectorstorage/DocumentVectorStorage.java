@@ -1,6 +1,7 @@
 package pureapps.appread.documentsvectorstorage;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import pureapps.appread.documentsvectorstorage.dto.DocumentChunk;
 import pureapps.appread.documentsvectorstorage.dto.DocumentChunkWithEmbedding;
@@ -16,8 +17,11 @@ public class DocumentVectorStorage {
     private final DocumentProcessingService documentProcessingService;
     private final EmbeddingService embeddingService;
 
+    @Value("${app.document.search.similarity-threshold:0.7}")
+    private float similarityThreshold;
 
-    public List<DocumentChunkWithEmbedding> generateEmbeddingsAndPersist(Path projectPath) {
+
+    public List<DocumentChunkWithEmbedding> generateEmbeddingsAndPersist(Path projectPath, String projectId) {
         try {
             List<DocumentChunk> chunks = documentProcessingService.processProjectToChunks(projectPath);
 
@@ -26,7 +30,6 @@ public class DocumentVectorStorage {
             }
 
             List<DocumentChunkWithEmbedding> chunksWithEmbeddings = embeddingService.generateEmbeddings(chunks);
-            String projectId = "temp-project-id";
             saveDocumentChunks(projectId, chunksWithEmbeddings);
 
             return chunksWithEmbeddings;
@@ -43,14 +46,13 @@ public class DocumentVectorStorage {
 
     public List<DocumentChunk> getDocumentChunksFromProject(String projectId, float[] queryEmbedding, int limit) {
         try {
-            List<DocumentChunkEntity> similarEntities = persistenceService.findSimilarChunkEntities(queryEmbedding, 1, limit, projectId);
+            List<DocumentChunkEntity> similarEntities = persistenceService.findSimilarChunkEntities(queryEmbedding, similarityThreshold, limit, projectId);
             return similarEntities.stream()
                     .map(DocumentChunkMapper::toDTO)
                     .toList();
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to get document chunks for project: " + projectId, e);
-
             }
         }
 

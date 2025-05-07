@@ -69,11 +69,11 @@ class DocumentVectorStorageIntegrationTest {
         Path textFilePath = tempProjectDir.resolve("README.md");
         String textContent = """
                 # Test Project
-                
+
                 This is a test project for integration testing.
-                
+
                 ## Features
-                
+
                 - Feature 1
                 - Feature 2
                 """;
@@ -83,7 +83,8 @@ class DocumentVectorStorageIntegrationTest {
     @Test
     void testGenerateEmbeddingsAndPersist() {
         // Generate embeddings and persist
-        List<DocumentChunkWithEmbedding> result = documentVectorStorage.generateEmbeddingsAndPersist(tempProjectDir);
+        String projectId = "temp-project-id";
+        List<DocumentChunkWithEmbedding> result = documentVectorStorage.generateEmbeddingsAndPersist(tempProjectDir, projectId);
 
         // Verify the result
         assertNotNull(result);
@@ -113,10 +114,10 @@ class DocumentVectorStorageIntegrationTest {
     @Test
     void testGetDocumentChunksFromProject() {
         // First, generate embeddings and persist
-        documentVectorStorage.generateEmbeddingsAndPersist(tempProjectDir);
+        String projectId = "temp-project-id";
+        documentVectorStorage.generateEmbeddingsAndPersist(tempProjectDir, projectId);
 
         // Now query for chunks
-        String projectId = "temp-project-id";
         String query = "Hello, world";
         int limit = 1;
 
@@ -137,7 +138,8 @@ class DocumentVectorStorageIntegrationTest {
     @Test
     void testNonExistentProject() {
         // First, generate embeddings and persist
-        documentVectorStorage.generateEmbeddingsAndPersist(tempProjectDir);
+        String projectId = "temp-project-id";
+        documentVectorStorage.generateEmbeddingsAndPersist(tempProjectDir, projectId);
 
         // Now query for chunks from a non-existent project
         String nonExistentProjectId = "non-existent-project";
