@@ -4,14 +4,19 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.prompt.Prompt;
 import pureapps.appread.documentsvectorstorage.DocumentVectorStorage;
 import pureapps.appread.documentsvectorstorage.dto.DocumentChunk;
 import pureapps.appread.documentsvectorstorage.dto.DocumentChunkWithEmbedding;
+import pureapps.appread.dto.FileNode;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -29,8 +34,14 @@ class DocumentationGenerationServiceTest {
     @Mock
     private DocumentVectorStorage documentVectorStorage;
 
+    @Mock
+    private ChatClient chatClient;
+
     @InjectMocks
     private DocumentationGenerationService documentationGenerationService;
+
+    @TempDir
+    Path tempDir;
 
     private final String testRepoUrl = "https://github.com/test/repo.git";
     private final Path mockRepoPath = Path.of("mock/repo/path");
@@ -139,5 +150,65 @@ class DocumentationGenerationServiceTest {
                 documentationGenerationService.queryDocumentation(projectId, query, limit));
 
         assertTrue(exception.getMessage().contains("Failed to query documentation"));
+    }
+
+    @Test
+    void generateDocumentationForLocalRepo_ShouldCreateDocumentationDirectory() throws IOException {
+        // Arrange
+        Path localRepoPath = tempDir;
+        Path documentationPath = localRepoPath.resolve("documentation");
+        FileNode mockFileStructure = new FileNode("root", localRepoPath.toString(), true);
+
+        // Mock ChatClient response
+        when(chatClient.prompt(any(Prompt.class)).call().content())
+                .thenReturn("# Project Documentation\n\nThis is a test documentation.");
+
+        // Mock GitService
+        when(gitService.getFileStructure(localRepoPath)).thenReturn(mockFileStructure);
+
+        // Act
+        Path result = documentationGenerationService.generateDocumentationForLocalRepo(localRepoPath);
+
+        // Assert
+        assertEquals(documentationPath, result);
+        assertTrue(Files.exists(documentationPath));
+
+        // Verify interactions
+        verify(gitService).getFileStructure(localRepoPath);
+        verify(chatClient, atLeastOnce()).prompt(any(Prompt.class));
+    }
+
+    @Test
+    void generateDocumentationForLocalRepo_WithInvalidPath_ShouldThrowException() {
+        // Arrange
+        Path invalidPath = Path.of("non-existent-path");
+
+        // Act & Assert
+        Exception exception = assertThrows(RuntimeException.class, () -> 
+                documentationGenerationService.generateDocumentationForLocalRepo(invalidPath));
+
+        assertTrue(exception.getMessage().contains("Failed to generate documentation"));
+
+        // Verify no interactions
+        verify(gitService, never()).getFileStructure(any());
+        verify(chatClient, never()).prompt(any(Prompt.class));
+    }
+
+    @Test
+    void generateDocumentationForLocalRepo_WhenGitServiceThrowsException_ShouldPropagateException() {
+        // Arrange
+        Path localRepoPath = tempDir;
+
+        when(gitService.getFileStructure(localRepoPath))
+                .thenThrow(new RuntimeException("Failed to get file structure"));
+
+        // Act & Assert
+        Exception exception = assertThrows(RuntimeException.class, () -> 
+                documentationGenerationService.generateDocumentationForLocalRepo(localRepoPath));
+
+        assertTrue(exception.getMessage().contains("Failed to generate documentation"));
+
+        // Verify no further interactions
+        verify(chatClient, never()).prompt(any(Prompt.class));
     }
 }
