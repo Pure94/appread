@@ -32,3 +32,6 @@ build/
 ### VS Code ###
 .vscode/
 .aider*
+/.qodo/
+/.mvn/
+/frontend/node_modules/
