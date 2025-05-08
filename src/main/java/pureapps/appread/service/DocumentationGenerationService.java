@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Service that connects GitService and DocumentVectorStorage to generate
@@ -30,6 +31,25 @@ public class DocumentationGenerationService {
     private final GitService gitService;
     private final DocumentVectorStorage documentVectorStorage;
     private final ChatClient chatClient;
+
+    // Same supported extensions as in DocumentProcessingService
+    private static final List<String> SUPPORTED_EXTENSIONS = List.of(
+            ".java", ".kt", ".js", ".ts", ".py", ".rb", ".go", ".rs", ".c", ".cpp", ".h", ".hpp",
+            ".cs", ".php", ".html", ".css", ".md", ".txt", ".json", ".xml", ".yaml", ".yml"
+    );
+
+    // Same ignored patterns as in DocumentProcessingService
+    private static final List<String> IGNORED_PATTERNS = List.of(
+            ".git", ".svn", ".hg", "CVS",
+            "node_modules", "bower_components", "vendor", "Pods", "packages",
+            "build", "dist", "target", "out", "bin", "obj", "gen",
+            ".idea", ".vscode", ".project", ".classpath", ".settings", ".DS_Store",
+            "*.iml", "*.suo", "*.user", "*.tmproj", "*.sublime-project", "*.sublime-workspace",
+            "logs", "tmp", "temp", ".cache", ".npm", ".yarn", ".gradle", ".mvn",
+            "*.log", "*.swp", "*~",
+            "__pycache__", ".pytest_cache", ".tox", ".venv", "venv", "env", "*.pyc",
+            "coverage", ".nyc_output"
+    );
 
     /**
      * Generates documentation for a GitHub repository.
@@ -104,17 +124,28 @@ public class DocumentationGenerationService {
             // Get the file structure of the repository
             FileNode fileStructure = gitService.getFileStructure(localRepoPath);
 
+            // Filter the file structure to include only supported files and exclude ignored patterns
+            FileNode filteredFileStructure = filterFileNode(fileStructure, localRepoPath);
+            log.info("Filtered file structure to include only supported files and exclude ignored patterns");
+
+            // Generate a unique project ID for RAG
+            String projectId = "local-" + UUID.randomUUID().toString().substring(0, 8);
+
+            // Process the repository with DocumentVectorStorage to enable RAG capabilities
+            log.info("Processing repository with DocumentVectorStorage to enable RAG capabilities");
+            documentVectorStorage.generateEmbeddingsAndPersist(localRepoPath, projectId);
+
             // Create a documentation directory if it doesn't exist
             Path documentationPath = localRepoPath.resolve("documentation");
             if (!Files.exists(documentationPath)) {
                 Files.createDirectory(documentationPath);
             }
 
-            // Generate project overview documentation
-            generateProjectOverview(localRepoPath, fileStructure, documentationPath);
+            // Generate project overview documentation with RAG enhancement
+            generateProjectOverview(localRepoPath, filteredFileStructure, documentationPath, projectId);
 
-            // Generate documentation for key components
-            generateComponentDocumentation(localRepoPath, fileStructure, documentationPath);
+            // Generate documentation for key components with RAG enhancement
+            generateComponentDocumentation(localRepoPath, filteredFileStructure, documentationPath, projectId);
 
             log.info("Documentation generated successfully for local repository: {}", localRepoPath);
 
@@ -134,6 +165,19 @@ public class DocumentationGenerationService {
      * @throws IOException If an I/O error occurs
      */
     private void generateProjectOverview(Path repoPath, FileNode fileStructure, Path documentationPath) throws IOException {
+        generateProjectOverview(repoPath, fileStructure, documentationPath, null);
+    }
+
+    /**
+     * Generates an overview of the project with optional RAG enhancement.
+     *
+     * @param repoPath Path to the repository
+     * @param fileStructure File structure of the repository
+     * @param documentationPath Path to save the documentation
+     * @param projectId Optional project ID for RAG enhancement, can be null
+     * @throws IOException If an I/O error occurs
+     */
+    private void generateProjectOverview(Path repoPath, FileNode fileStructure, Path documentationPath, String projectId) throws IOException {
         log.info("Generating project overview documentation");
 
         // Create a prompt for the project overview
@@ -148,6 +192,11 @@ public class DocumentationGenerationService {
 
         // Add key files content to the prompt (README, pom.xml, etc.)
         addKeyFilesContentToPrompt(repoPath, promptBuilder);
+
+        // Enhance with RAG if projectId is provided
+        if (projectId != null) {
+            enhancePromptWithRAG(promptBuilder, projectId, "project overview");
+        }
 
         // Generate the overview using ChatClient
         String overview = chatClient.prompt(new Prompt(promptBuilder.toString())).call().content();
@@ -168,6 +217,19 @@ public class DocumentationGenerationService {
      * @throws IOException If an I/O error occurs
      */
     private void generateComponentDocumentation(Path repoPath, FileNode fileStructure, Path documentationPath) throws IOException {
+        generateComponentDocumentation(repoPath, fileStructure, documentationPath, null);
+    }
+
+    /**
+     * Generates documentation for key components of the project with optional RAG enhancement.
+     *
+     * @param repoPath Path to the repository
+     * @param fileStructure File structure of the repository
+     * @param documentationPath Path to save the documentation
+     * @param projectId Optional project ID for RAG enhancement, can be null
+     * @throws IOException If an I/O error occurs
+     */
+    private void generateComponentDocumentation(Path repoPath, FileNode fileStructure, Path documentationPath, String projectId) throws IOException {
         log.info("Generating component documentation");
 
         // Create a components directory
@@ -181,7 +243,7 @@ public class DocumentationGenerationService {
 
         // Generate documentation for each key component
         for (FileNode component : keyComponents) {
-            generateComponentDoc(repoPath, component, componentsPath);
+            generateComponentDoc(repoPath, component, componentsPath, projectId);
         }
 
         log.info("Component documentation generated successfully");
@@ -232,6 +294,19 @@ public class DocumentationGenerationService {
      * @throws IOException If an I/O error occurs
      */
     private void generateComponentDoc(Path repoPath, FileNode component, Path componentsPath) throws IOException {
+        generateComponentDoc(repoPath, component, componentsPath, null);
+    }
+
+    /**
+     * Generates documentation for a specific component with optional RAG enhancement.
+     *
+     * @param repoPath Path to the repository
+     * @param component Component to document
+     * @param componentsPath Path to save the component documentation
+     * @param projectId Optional project ID for RAG enhancement, can be null
+     * @throws IOException If an I/O error occurs
+     */
+    private void generateComponentDoc(Path repoPath, FileNode component, Path componentsPath, String projectId) throws IOException {
         log.info("Generating documentation for component: {}", component.getName());
 
         // Create a prompt for the component documentation
@@ -247,6 +322,11 @@ public class DocumentationGenerationService {
 
         // Add key files content to the prompt
         addComponentFilesContentToPrompt(repoPath, component, promptBuilder);
+
+        // Enhance with RAG if projectId is provided
+        if (projectId != null) {
+            enhancePromptWithRAG(promptBuilder, projectId, "component " + component.getName());
+        }
 
         // Generate the component documentation using ChatClient
         String componentDoc = chatClient.prompt(new Prompt(promptBuilder.toString())).call().content();
@@ -318,13 +398,16 @@ public class DocumentationGenerationService {
     private void addComponentFilesContentToPrompt(Path repoPath, FileNode component, StringBuilder promptBuilder) throws IOException {
         // If the component is a directory, add content of key files
         if (component.isDirectory() && component.getChildren() != null) {
-            // Add content of up to 5 Java files
+            // Add content of up to 5 supported files
             int filesAdded = 0;
             for (FileNode child : component.getChildren()) {
-                if (!child.isDirectory() && child.getName().endsWith(".java") && filesAdded < 5) {
+                if (!child.isDirectory() && filesAdded < 5) {
                     Path filePath = repoPath.resolve(child.getPath());
-                    if (Files.exists(filePath)) {
-                        promptBuilder.append("\n").append(child.getName()).append(" content:\n```java\n");
+                    if (Files.exists(filePath) && isFileSupported(filePath) && isNotIgnored(filePath)) {
+                        String extension = getFileExtension(child.getName());
+                        String codeBlockLanguage = getCodeBlockLanguage(extension);
+
+                        promptBuilder.append("\n").append(child.getName()).append(" content:\n```").append(codeBlockLanguage).append("\n");
                         promptBuilder.append(Files.readString(filePath));
                         promptBuilder.append("\n```\n");
                         filesAdded++;
@@ -332,6 +415,49 @@ public class DocumentationGenerationService {
                 }
             }
         }
+    }
+
+    /**
+     * Gets the file extension from a filename.
+     *
+     * @param filename The filename
+     * @return The file extension (without the dot) or an empty string if no extension
+     */
+    private String getFileExtension(String filename) {
+        int lastDotIndex = filename.lastIndexOf('.');
+        if (lastDotIndex > 0) {
+            return filename.substring(lastDotIndex + 1);
+        }
+        return "";
+    }
+
+    /**
+     * Maps a file extension to a code block language for Markdown.
+     *
+     * @param extension The file extension
+     * @return The code block language
+     */
+    private String getCodeBlockLanguage(String extension) {
+        return switch (extension.toLowerCase()) {
+            case "java" -> "java";
+            case "kt" -> "kotlin";
+            case "js" -> "javascript";
+            case "ts" -> "typescript";
+            case "py" -> "python";
+            case "rb" -> "ruby";
+            case "go" -> "go";
+            case "rs" -> "rust";
+            case "c", "cpp", "h", "hpp" -> "cpp";
+            case "cs" -> "csharp";
+            case "php" -> "php";
+            case "html" -> "html";
+            case "css" -> "css";
+            case "md" -> "markdown";
+            case "json" -> "json";
+            case "xml" -> "xml";
+            case "yaml", "yml" -> "yaml";
+            default -> "text";
+        };
     }
 
     /**
@@ -347,5 +473,105 @@ public class DocumentationGenerationService {
 
         // Combine repository name with a UUID to ensure uniqueness
         return repoName + "-" + UUID.randomUUID().toString().substring(0, 8);
+    }
+
+    /**
+     * Checks if a file has a supported extension.
+     *
+     * @param path Path to the file
+     * @return true if the file has a supported extension, false otherwise
+     */
+    private boolean isFileSupported(Path path) {
+        String fileName = path.toString().toLowerCase();
+        return SUPPORTED_EXTENSIONS.stream().anyMatch(fileName::endsWith);
+    }
+
+    /**
+     * Checks if a file should be ignored based on ignored patterns.
+     *
+     * @param path Path to the file
+     * @return true if the file should not be ignored, false if it should be ignored
+     */
+    private boolean isNotIgnored(Path path) {
+        String pathStr = path.toString();
+        return IGNORED_PATTERNS.stream().noneMatch(pathStr::contains);
+    }
+
+    /**
+     * Enhances a prompt with relevant context from the RAG system.
+     *
+     * @param promptBuilder The prompt builder to enhance
+     * @param projectId The project ID to query for relevant context
+     * @param query The query to use for finding relevant context
+     */
+    private void enhancePromptWithRAG(StringBuilder promptBuilder, String projectId, String query) {
+        try {
+            log.info("Enhancing prompt with RAG for query: {}", query);
+
+            // Get relevant document chunks from the RAG system
+            List<DocumentChunk> relevantChunks = documentVectorStorage.getDocumentChunksFromProject(projectId, query, 5);
+
+            if (!relevantChunks.isEmpty()) {
+                promptBuilder.append("\n\nAdditional context from the codebase:\n");
+
+                for (DocumentChunk chunk : relevantChunks) {
+                    promptBuilder.append("\nFile: ").append(chunk.getFilePath())
+                            .append(" (lines ").append(chunk.getStartLine())
+                            .append("-").append(chunk.getEndLine()).append(")\n");
+                    promptBuilder.append("```\n").append(chunk.getContent()).append("```\n");
+                }
+            }
+        } catch (Exception e) {
+            // Log the error but continue without RAG enhancement
+            log.warn("Failed to enhance prompt with RAG: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Filters a FileNode tree to include only supported files and exclude ignored patterns.
+     *
+     * @param node The FileNode to filter
+     * @param repoPath The base repository path
+     * @return A filtered FileNode, or null if the node should be excluded
+     */
+    private FileNode filterFileNode(FileNode node, Path repoPath) {
+        if (node == null) {
+            return null;
+        }
+
+        Path nodePath = Path.of(node.getPath());
+
+        // If it's a file, check if it's supported and not ignored
+        if (!node.isDirectory()) {
+            if (isFileSupported(nodePath) && isNotIgnored(nodePath)) {
+                return node;
+            }
+            return null;
+        }
+
+        // For directories, filter children recursively
+        FileNode filteredNode = new FileNode(node.getName(), node.getPath(), true);
+
+        if (node.getChildren() != null) {
+            List<FileNode> filteredChildren = node.getChildren().stream()
+                    .map(child -> filterFileNode(child, repoPath))
+                    .filter(child -> child != null)
+                    .collect(Collectors.toList());
+
+            // Add filtered children to the node
+            for (FileNode child : filteredChildren) {
+                filteredNode.addChild(child);
+            }
+        }
+
+        // If directory has no children after filtering, exclude it unless it's the root
+        if (filteredNode.getChildren() == null || filteredNode.getChildren().isEmpty()) {
+            if (nodePath.equals(repoPath)) {
+                return filteredNode; // Keep root even if empty
+            }
+            return null;
+        }
+
+        return filteredNode;
     }
 }

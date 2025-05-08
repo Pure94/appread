@@ -24,6 +24,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
 class DocumentationGenerationServiceTest {
@@ -47,9 +48,11 @@ class DocumentationGenerationServiceTest {
     private final Path mockRepoPath = Path.of("mock/repo/path");
     private final String expectedProjectIdPrefix = "repo-";
 
-    @BeforeEach
-    void setUp() throws GitAPIException, IOException {
-        // Common setup for tests
+    // No common setup needed, will set up mocks in each test
+
+    @Test
+    void generateDocumentation_ShouldReturnProjectId() throws GitAPIException, IOException {
+        // Arrange
         when(gitService.cloneRepository(eq(testRepoUrl), any(), any()))
                 .thenReturn(mockRepoPath);
 
@@ -58,10 +61,7 @@ class DocumentationGenerationServiceTest {
 
         when(gitService.deleteRepository(mockRepoPath))
                 .thenReturn(true);
-    }
 
-    @Test
-    void generateDocumentation_ShouldReturnProjectId() throws GitAPIException, IOException {
         // Act
         String projectId = documentationGenerationService.generateDocumentation(
                 testRepoUrl, Optional.empty(), Optional.empty());
@@ -82,6 +82,15 @@ class DocumentationGenerationServiceTest {
         Optional<String> branch = Optional.of("develop");
         Optional<String> token = Optional.of("github_token");
 
+        when(gitService.cloneRepository(eq(testRepoUrl), eq(branch), eq(token)))
+                .thenReturn(mockRepoPath);
+
+        when(documentVectorStorage.generateEmbeddingsAndPersist(eq(mockRepoPath), anyString()))
+                .thenReturn(List.of(new DocumentChunkWithEmbedding()));
+
+        when(gitService.deleteRepository(mockRepoPath))
+                .thenReturn(true);
+
         // Act
         String projectId = documentationGenerationService.generateDocumentation(
                 testRepoUrl, branch, token);
@@ -99,8 +108,8 @@ class DocumentationGenerationServiceTest {
     @Test
     void generateDocumentation_WhenGitServiceThrowsException_ShouldPropagateException() throws GitAPIException, IOException {
         // Arrange
-        when(gitService.cloneRepository(eq(testRepoUrl), any(), any()))
-                .thenThrow(new RuntimeException("Failed to clone repository"));
+        given(gitService.cloneRepository(eq(testRepoUrl), any(), any()))
+                .willThrow(new RuntimeException("Failed to clone repository"));
 
         // Act & Assert
         Exception exception = assertThrows(RuntimeException.class, () -> 
@@ -121,8 +130,8 @@ class DocumentationGenerationServiceTest {
         int limit = 10;
         List<DocumentChunk> expectedChunks = List.of(new DocumentChunk());
 
-        when(documentVectorStorage.getDocumentChunksFromProject(projectId, query, limit))
-                .thenReturn(expectedChunks);
+        given(documentVectorStorage.getDocumentChunksFromProject(projectId, query, limit))
+                .willReturn(expectedChunks);
 
         // Act
         List<DocumentChunk> result = documentationGenerationService.queryDocumentation(projectId, query, limit);
@@ -142,8 +151,8 @@ class DocumentationGenerationServiceTest {
         String query = "test query";
         int limit = 10;
 
-        when(documentVectorStorage.getDocumentChunksFromProject(projectId, query, limit))
-                .thenThrow(new RuntimeException("Failed to query documentation"));
+        given(documentVectorStorage.getDocumentChunksFromProject(projectId, query, limit))
+                .willThrow(new RuntimeException("Failed to query documentation"));
 
         // Act & Assert
         Exception exception = assertThrows(RuntimeException.class, () -> 
@@ -157,14 +166,37 @@ class DocumentationGenerationServiceTest {
         // Arrange
         Path localRepoPath = tempDir;
         Path documentationPath = localRepoPath.resolve("documentation");
+
+        // Create a mock file structure with supported and unsupported files
         FileNode mockFileStructure = new FileNode("root", localRepoPath.toString(), true);
 
-        // Mock ChatClient response
-        when(chatClient.prompt(any(Prompt.class)).call().content())
-                .thenReturn("# Project Documentation\n\nThis is a test documentation.");
+        // Add a source directory with Java files (supported)
+        FileNode srcDir = new FileNode("src", localRepoPath.resolve("src").toString(), true);
+        mockFileStructure.addChild(srcDir);
+
+        FileNode javaFile = new FileNode("Main.java", localRepoPath.resolve("src/Main.java").toString(), false);
+        srcDir.addChild(javaFile);
+
+        // Add a directory with unsupported/ignored files
+        FileNode buildDir = new FileNode("build", localRepoPath.resolve("build").toString(), true);
+        mockFileStructure.addChild(buildDir);
+
+        FileNode classFile = new FileNode("Main.class", localRepoPath.resolve("build/Main.class").toString(), false);
+        buildDir.addChild(classFile);
+
+        // Mock ChatClient response using BDDMockito.given
+        given(chatClient.prompt(any(Prompt.class)).call().content())
+                .willReturn("# Project Documentation\n\nThis is a test documentation.");
 
         // Mock GitService
         when(gitService.getFileStructure(localRepoPath)).thenReturn(mockFileStructure);
+
+        // Mock DocumentVectorStorage
+        List<DocumentChunk> relevantChunks = List.of(new DocumentChunk());
+        when(documentVectorStorage.generateEmbeddingsAndPersist(eq(localRepoPath), anyString()))
+                .thenReturn(List.of(new DocumentChunkWithEmbedding()));
+        when(documentVectorStorage.getDocumentChunksFromProject(anyString(), anyString(), anyInt()))
+                .thenReturn(relevantChunks);
 
         // Act
         Path result = documentationGenerationService.generateDocumentationForLocalRepo(localRepoPath);
@@ -175,6 +207,8 @@ class DocumentationGenerationServiceTest {
 
         // Verify interactions
         verify(gitService).getFileStructure(localRepoPath);
+        verify(documentVectorStorage).generateEmbeddingsAndPersist(eq(localRepoPath), argThat(id -> id.startsWith("local-")));
+        verify(documentVectorStorage, atLeastOnce()).getDocumentChunksFromProject(anyString(), anyString(), anyInt());
         verify(chatClient, atLeastOnce()).prompt(any(Prompt.class));
     }
 
@@ -192,6 +226,7 @@ class DocumentationGenerationServiceTest {
         // Verify no interactions
         verify(gitService, never()).getFileStructure(any());
         verify(chatClient, never()).prompt(any(Prompt.class));
+        verify(documentVectorStorage, never()).generateEmbeddingsAndPersist(any(), any());
     }
 
     @Test
@@ -199,8 +234,8 @@ class DocumentationGenerationServiceTest {
         // Arrange
         Path localRepoPath = tempDir;
 
-        when(gitService.getFileStructure(localRepoPath))
-                .thenThrow(new RuntimeException("Failed to get file structure"));
+        given(gitService.getFileStructure(localRepoPath))
+                .willThrow(new RuntimeException("Failed to get file structure"));
 
         // Act & Assert
         Exception exception = assertThrows(RuntimeException.class, () -> 
@@ -210,5 +245,6 @@ class DocumentationGenerationServiceTest {
 
         // Verify no further interactions
         verify(chatClient, never()).prompt(any(Prompt.class));
+        verify(documentVectorStorage, never()).generateEmbeddingsAndPersist(any(), any());
     }
 }
