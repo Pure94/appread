@@ -19,21 +19,32 @@ class OpenAiChatServicesConfiguration {
     @Bean
     ChatClient openAiClient() {
         return ChatClient.builder(
-                        openAiChatModel())
+                        chatModel())
                 .build();
     }
 
     @Bean
-    OpenAiChatModel openAiChatModel() {
-        var options = OpenAiChatOptions.builder()
-                .streamUsage(true)
+    public OpenAiChatModel chatModel() {
+        return OpenAiChatModel.builder()
+                .defaultOptions(openAiChatOptions())
+                .openAiApi(openAiApi())
+                .build();
+    }
+
+    @Bean
+    public OpenAiChatOptions openAiChatOptions() {
+        return OpenAiChatOptions.builder()
                 .model(model)
+                .temperature(0.4)
+                .maxTokens(200)
                 .build();
-        return new OpenAiChatModel(openAiApi(), options);
     }
 
+
     @Bean
-    OpenAiApi openAiApi() {
-        return new OpenAiApi(apiKey);
+    public OpenAiApi openAiApi() {
+        return OpenAiApi.builder()
+                .apiKey(apiKey)
+                .build();
     }
 }

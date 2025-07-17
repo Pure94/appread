@@ -46,6 +46,7 @@ class EmbeddingService {
             result.setFilePath(chunk.getFilePath());
             result.setStartLine(chunk.getStartLine());
             result.setEndLine(chunk.getEndLine());
+            result.setFileChecksum(chunk.getFileChecksum());
             result.setEmbedding(embeddingFloatArray);
 
             log.debug("Generated embedding for chunk: {} (lines {}-{})", chunk.getFilePath(), chunk.getStartLine(), chunk.getEndLine());

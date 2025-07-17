@@ -10,5 +10,6 @@ public class DocumentChunkWithEmbedding {
     private String filePath;
     private int startLine;
     private int endLine;
+    private String fileChecksum;
     private float[] embedding;
 }

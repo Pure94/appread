@@ -1,0 +1,87 @@
+
+{
+	"info": {
+		"_postman_id": "YOUR_COLLECTION_ID",
+		"name": "DocumentationController API",
+		"description": "Collection for Spring Boot DocumentationController",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Generate Documentation from GitHub",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"repoUrl\": \"https://github.com/your-username/your-repo.git\",\n    \"branch\": \"main\",\n    \"token\": \"your_optional_github_token\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/documentation/generate",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"documentation",
+						"generate"
+					]
+				},
+				"description": "Generates documentation for a GitHub repository.\n\n**Request Body:**\n- `repoUrl` (String, required): The URL of the GitHub repository.\n- `branch` (String, optional): The specific branch to use. Defaults to the repository's default branch if not provided.\n- `token` (String, optional): A GitHub personal access token if the repository is private or to avoid rate limiting."
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Documentation from Local Path",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"localRepoPath\": \"/path/to/your/local/repository\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/documentation/generate-local",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"documentation",
+						"generate-local"
+					]
+				},
+				"description": "Generates documentation for a local repository path.\n\n**Request Body:**\n- `localRepoPath` (String, required): The absolute or relative path to the local repository on the server."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string",
+			"description": "The base URL of your application"
+		}
+	]
+}

@@ -42,6 +42,9 @@ class DocumentChunkEntity {
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "file_checksum", nullable = false, length = 64)
+    private String fileChecksum;
+
     @Column(name = "embedding", nullable = false, columnDefinition = "vector(1536)")
     @JdbcTypeCode(SqlTypes.VARBINARY)
     private float[] embedding;
@@ -54,12 +57,13 @@ class DocumentChunkEntity {
         createdAt = OffsetDateTime.now();
     }
 
-    public DocumentChunkEntity(String projectId, String filePath, int startLine, int endLine, String content, float[] embedding) {
+    public DocumentChunkEntity(String projectId, String filePath, int startLine, int endLine, String content, String fileChecksum, float[] embedding) {
         this.projectId = projectId;
         this.filePath = filePath;
         this.startLine = startLine;
         this.endLine = endLine;
         this.content = content;
+        this.fileChecksum = fileChecksum;
         setEmbeddingFromArray(embedding);
     }
 

@@ -16,6 +16,7 @@ public class DocumentVectorStorage {
     private final PersistenceService persistenceService;
     private final DocumentProcessingService documentProcessingService;
     private final EmbeddingService embeddingService;
+    private final FileChecksumService fileChecksumService;
 
     @Value("${app.document.search.similarity-threshold:0.7}")
     private float similarityThreshold;
@@ -35,6 +36,56 @@ public class DocumentVectorStorage {
             return chunksWithEmbeddings;
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate embeddings and persist for project: " + projectPath, e);
+        }
+    }
+
+    /**
+     * Generate embeddings and persist with checksum-based change detection.
+     * Only processes new or modified files, skips unchanged files.
+     */
+    public ProcessingResult generateEmbeddingsAndPersistWithChecksumCheck(Path projectPath, String projectId) {
+        try {
+            ProcessingResult processingResult = documentProcessingService.processProjectToChunksWithChecksumCheck(projectPath, projectId);
+
+            if (!processingResult.hasChanges()) {
+                return processingResult;
+            }
+
+            // Handle modified files - delete old chunks first
+            for (String modifiedFile : processingResult.getModifiedFiles()) {
+                persistenceService.deleteChunksForFile(projectId, modifiedFile);
+            }
+
+            // Generate embeddings for new and modified files
+            if (!processingResult.getNewChunks().isEmpty()) {
+                List<DocumentChunkWithEmbedding> chunksWithEmbeddings = embeddingService.generateEmbeddings(processingResult.getNewChunks());
+                saveDocumentChunks(projectId, chunksWithEmbeddings);
+
+                // Update file metadata for all processed files
+                updateFileMetadata(projectPath, projectId, processingResult);
+            }
+
+            return processingResult;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate embeddings and persist with checksum check for project: " + projectPath, e);
+        }
+    }
+
+    private void updateFileMetadata(Path projectPath, String projectId, ProcessingResult processingResult) {
+        try {
+            // Update metadata for new files
+            for (String newFile : processingResult.getNewFiles()) {
+                Path filePath = projectPath.resolve(newFile);
+                fileChecksumService.saveFileMetadata(projectId, newFile, filePath);
+            }
+
+            // Update metadata for modified files
+            for (String modifiedFile : processingResult.getModifiedFiles()) {
+                Path filePath = projectPath.resolve(modifiedFile);
+                fileChecksumService.saveFileMetadata(projectId, modifiedFile, filePath);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update file metadata", e);
         }
     }
 

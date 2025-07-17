@@ -27,6 +27,7 @@ class DocumentChunkMapper {
         dto.setFilePath(entity.getFilePath());
         dto.setStartLine(entity.getStartLine());
         dto.setEndLine(entity.getEndLine());
+        dto.setFileChecksum(entity.getFileChecksum());
         return dto;
     }
 

@@ -29,12 +29,23 @@ interface DocumentChunkRepository extends JpaRepository<DocumentChunkEntity, UUI
     );
 
     @Modifying
-    @Query(value = "INSERT INTO document_chunks (uuid, project_id, file_path, start_line, end_line, content, embedding, created_at) " +
+    @Query(value = "INSERT INTO document_chunks (uuid, project_id, file_path, start_line, end_line, content, file_checksum, embedding, created_at) " +
             "VALUES (gen_random_uuid(), :#{#entity.projectId}, :#{#entity.filePath}, :#{#entity.startLine}, :#{#entity.endLine}, " +
-            ":#{#entity.content}, CAST(:#{#entity.embedding} AS vector), CURRENT_TIMESTAMP)", nativeQuery = true)
+            ":#{#entity.content}, :#{#entity.fileChecksum}, CAST(:#{#entity.embedding} AS vector), CURRENT_TIMESTAMP)", nativeQuery = true)
     void saveWithVectorCast(@Param("entity") DocumentChunkEntity entity);
 
     default void saveAllWithVectorCast(List<DocumentChunkEntity> entities) {
         entities.forEach(this::saveWithVectorCast);
     }
+
+    @Modifying
+    @Query("DELETE FROM DocumentChunkEntity dc WHERE dc.projectId = :projectId AND dc.filePath = :filePath")
+    int deleteByProjectIdAndFilePath(@Param("projectId") String projectId, @Param("filePath") String filePath);
+
+    @Modifying
+    @Query("DELETE FROM DocumentChunkEntity dc WHERE dc.projectId = :projectId AND dc.fileChecksum = :fileChecksum")
+    int deleteByProjectIdAndFileChecksum(@Param("projectId") String projectId, @Param("fileChecksum") String fileChecksum);
+
+    @Query("SELECT dc FROM DocumentChunkEntity dc WHERE dc.projectId = :projectId AND dc.filePath = :filePath")
+    List<DocumentChunkEntity> findByProjectIdAndFilePath(@Param("projectId") String projectId, @Param("filePath") String filePath);
 }

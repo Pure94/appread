@@ -34,6 +34,7 @@ class PersistenceService {
                             chunk.getStartLine(),
                             chunk.getEndLine(),
                             chunk.getContent(),
+                            chunk.getFileChecksum(),
                             chunk.getEmbedding()
                     ))
                     .collect(Collectors.toList());
@@ -69,6 +70,30 @@ class PersistenceService {
         } catch (Exception e) {
             log.error("Error finding similar chunk entities for project {}: {}", projectId, e.getMessage(), e);
             return List.of();
+        }
+    }
+
+    @Transactional
+    void deleteChunksForFile(String projectId, String filePath) {
+        log.info("Deleting chunks for file: {} in project: {}", filePath, projectId);
+        try {
+            int deletedCount = chunkRepository.deleteByProjectIdAndFilePath(projectId, filePath);
+            log.info("Deleted {} chunks for file: {} in project: {}", deletedCount, filePath, projectId);
+        } catch (Exception e) {
+            log.error("Error deleting chunks for file {} in project {}: {}", filePath, projectId, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete chunks for file: " + filePath, e);
+        }
+    }
+
+    @Transactional
+    void deleteChunksByChecksum(String projectId, String fileChecksum) {
+        log.info("Deleting chunks with checksum: {} in project: {}", fileChecksum, projectId);
+        try {
+            int deletedCount = chunkRepository.deleteByProjectIdAndFileChecksum(projectId, fileChecksum);
+            log.info("Deleted {} chunks with checksum: {} in project: {}", deletedCount, fileChecksum, projectId);
+        } catch (Exception e) {
+            log.error("Error deleting chunks with checksum {} in project {}: {}", fileChecksum, projectId, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete chunks with checksum: " + fileChecksum, e);
         }
     }
 }

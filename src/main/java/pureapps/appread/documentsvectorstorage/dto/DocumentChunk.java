@@ -11,5 +11,6 @@ public class DocumentChunk {
     private String filePath;
     private int startLine;
     private int endLine;
+    private String fileChecksum;
 
 }
